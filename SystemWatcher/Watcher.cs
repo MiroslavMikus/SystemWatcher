@@ -4,6 +4,7 @@ using Serilog.Sinks.Elasticsearch;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -131,12 +132,15 @@ namespace SystemWatcher
                             })
                             .CreateLogger();
 
+            var fileName = $"log/SystemUsage-{DateTime.Now.ToString("ddMMyyyy_HHmmss")}.csv";
+
+            File.AppendAllText(fileName, "DATE,TIME,CPU,MEMORY,COUNT" + Environment.NewLine);
+
             _csvLogger = new LoggerConfiguration()
                             .MinimumLevel.Information()
-                            .WriteTo.File("log/SystemUsage-{Date}.log", outputTemplate: "{Timestamp:dd/MM/yyy},{Timestamp:HH:mm:ss},{Message}{NewLine}")
+                            .WriteTo.File(fileName, outputTemplate: "{Timestamp:dd/MM/yyy},{Timestamp:HH:mm:ss},{Message}{NewLine}")
                             .CreateLogger();
 
-            _csvLogger.Information("TIME,DATE,CPU,RAM,COUNT");
         }
     }
 }
