@@ -31,5 +31,23 @@ namespace SystemWatcher.Properties {
                 return ((int)(this["ReportIntervallMs"]));
             }
         }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("http://localhost:9200")]
+        public string ElasticSearchUrl {
+            get {
+                return ((string)(this["ElasticSearchUrl"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool UseCSV {
+            get {
+                return ((bool)(this["UseCSV"]));
+            }
+        }
     }
 }

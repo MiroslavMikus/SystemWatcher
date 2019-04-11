@@ -16,19 +16,24 @@ namespace SystemWatcher
 
         private Logger _elasticLogger;
         private Logger _csvLogger;
+        private Logger _serviceLogger = new LoggerConfiguration()
+                            .MinimumLevel.Verbose()
+                            .WriteTo.Console()
+                            .WriteTo.File("log/ServiceLog.log")
+                            .CreateLogger();
 
         public void Start()
         {
-            if (Settings.Default.ReportIntervallMs < 100)
-            {
-                throw new ArgumentException("Min value of ReportIntervallMs is 10");
-            }
+            _serviceLogger.Information("Starting service");
 
-            Console.WriteLine($"Report intervall is {Settings.Default.ReportIntervallMs}");
+            _serviceLogger.Information("Settings {ReportIntervallMs}, elastic search url {Url}, using csv logger {csv}",
+                Settings.Default.ReportIntervallMs, Settings.Default.ElasticSearchUrl, Settings.Default.UseCSV);
 
-            _cancellation = new CancellationTokenSource();
+            SettingsValidation();
 
             CreateLogger();
+
+            _cancellation = new CancellationTokenSource();
 
             Task.Run(async () =>
             {
@@ -50,40 +55,73 @@ namespace SystemWatcher
                     cpu = Math.Round(cpuCounter.NextValue(), 2);
                     ram = Math.Round(memoryCounter.NextValue(), 2);
 
-                    _elasticLogger.Information("Cpu {Cpu}, Ram {Ram}", cpu, ram);
+                    _elasticLogger?.Information("Cpu {Cpu}, Ram {Ram}", cpu, ram);
 
-                    _csvLogger.Information("{Cpu},{Memory}", cpu, ram);
+                    _csvLogger?.Information("{Cpu},{Memory}", cpu, ram);
                 }
             });
         }
 
+        private void SettingsValidation()
+        {
+            if (Settings.Default.ReportIntervallMs < 100)
+            {
+                _serviceLogger.Error("Min value of ReportIntervallMs is 100");
+                throw new Exception();
+            }
+
+            if (!string.IsNullOrEmpty(Settings.Default.ElasticSearchUrl))
+            {
+                try
+                {
+                    new Uri(Settings.Default.ElasticSearchUrl);
+                }
+                catch (Exception ex)
+                {
+                    _serviceLogger.Error(ex, "Can't parse elastic search url {url}", Settings.Default.ElasticSearchUrl);
+                    throw ex;
+                }
+            }
+
+            if (string.IsNullOrEmpty(Settings.Default.ElasticSearchUrl) && !Settings.Default.UseCSV)
+            {
+                _serviceLogger.Error("You have to eather specify the serilog url or use csv logger!");
+                throw new Exception();
+            }
+        }
+
         public void Stop()
         {
+            _serviceLogger.Information("Stopping service");
             _cancellation.Cancel();
         }
 
         private void CreateLogger()
         {
-            _elasticLogger = new LoggerConfiguration()
+            if (!string.IsNullOrEmpty(Settings.Default.ElasticSearchUrl))
+                _elasticLogger = new LoggerConfiguration()
                             .Enrich.WithProperty("system", "SystemWatcher")
                             .MinimumLevel.Information()
                             .WriteTo.Console()
-                            .WriteTo.Elasticsearch(new ElasticsearchSinkOptions(new Uri("http://localhost:9200"))
+                            .WriteTo.Elasticsearch(new ElasticsearchSinkOptions(new Uri(Settings.Default.ElasticSearchUrl))
                             {
                                 AutoRegisterTemplate = true,
                                 AutoRegisterTemplateVersion = AutoRegisterTemplateVersion.ESv6,
                             })
                             .CreateLogger();
 
-            var fileName = $"log/SystemUsage.csv";
+            if (Settings.Default.UseCSV)
+            {
+                var fileName = $"log/SystemUsage.csv";
 
-            if (!File.Exists(fileName))
-                File.AppendAllText(fileName, "DATE,TIME,CPU,MEMORY" + Environment.NewLine);
+                if (!File.Exists(fileName))
+                    File.AppendAllText(fileName, "DATE,TIME,CPU,MEMORY" + Environment.NewLine);
 
-            _csvLogger = new LoggerConfiguration()
-                            .MinimumLevel.Information()
-                            .WriteTo.File(fileName, outputTemplate: "{Timestamp:dd/MM/yyy},{Timestamp:HH:mm:ss},{Message}{NewLine}")
-                            .CreateLogger();
+                _csvLogger = new LoggerConfiguration()
+                                .MinimumLevel.Information()
+                                .WriteTo.File(fileName, outputTemplate: "{Timestamp:dd/MM/yyy},{Timestamp:HH:mm:ss},{Message}{NewLine}")
+                                .CreateLogger();
+            }
         }
     }
 }
