@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using SystemWatcher.Properties;
 
 namespace SystemWatcher
 {
@@ -52,7 +53,22 @@ namespace SystemWatcher
 
         public void Start()
         {
+            if (Settings.Default.CaptureIntervallMs < 100)
+            {
+                throw new ArgumentException("Min value of CaptureIntervallMs is 100");
+            }
+
+            if (Settings.Default.ReportIntervallSec < 10)
+            {
+                throw new ArgumentException("Min value of ReportIntervallSec is 10");
+            }
+
+            Console.WriteLine($"Capture intervall is {Settings.Default.CaptureIntervallMs}");
+
+            Console.WriteLine($"Report intervall is {Settings.Default.ReportIntervallSec}");
+
             _cancellation = new CancellationTokenSource();
+
             CreateLogger();
 
             Task.Run(async () =>
@@ -64,7 +80,7 @@ namespace SystemWatcher
                 {
                     if (_cancellation.Token.IsCancellationRequested) break;
 
-                    await Task.Delay(1000);
+                    await Task.Delay(Settings.Default.CaptureIntervallMs, _cancellation.Token);
 
                     CpuValues.Add(Math.Round(cpuCounter.NextValue(), 2));
                     RamValues.Add(Math.Round(memoryCounter.NextValue(), 2));
@@ -77,7 +93,7 @@ namespace SystemWatcher
 
                 while (true)
                 {
-                    await Task.Delay(10_000);
+                    await Task.Delay(TimeSpan.FromSeconds(Settings.Default.ReportIntervallSec), _cancellation.Token);
 
                     if (_cancellation.Token.IsCancellationRequested) break;
 
@@ -117,7 +133,7 @@ namespace SystemWatcher
 
             _csvLogger = new LoggerConfiguration()
                             .MinimumLevel.Information()
-                            .WriteTo.File("log/SystemUsage.csv", outputTemplate: "{Timestamp:dd/MM/yyy},{Timestamp:HH:mm:ss},{Message}{NewLine}")
+                            .WriteTo.File("log/SystemUsage-{Date}.log", outputTemplate: "{Timestamp:dd/MM/yyy},{Timestamp:HH:mm:ss},{Message}{NewLine}")
                             .CreateLogger();
 
             _csvLogger.Information("TIME,DATE,CPU,RAM,COUNT");
