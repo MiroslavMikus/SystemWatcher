@@ -26,8 +26,8 @@ namespace SystemWatcher
         {
             _serviceLogger.Information("Starting service");
 
-            _serviceLogger.Information("Settings {ReportIntervallMs}, elastic search url {Url}, using csv logger {csv}",
-                Settings.Default.ReportIntervallMs, Settings.Default.ElasticSearchUrl, Settings.Default.UseCSV);
+            _serviceLogger.Information("Settings {ReportIntervallSec}, elastic search url {Url}, using csv logger {csv}",
+                Settings.Default.ReportIntervallSec, Settings.Default.ElasticSearchUrl, Settings.Default.UseCSV);
 
             SettingsValidation();
 
@@ -50,7 +50,7 @@ namespace SystemWatcher
                 {
                     if (_cancellation.Token.IsCancellationRequested) break;
 
-                    await Task.Delay(Settings.Default.ReportIntervallMs, _cancellation.Token);
+                    await Task.Delay(Settings.Default.ReportIntervallSec, _cancellation.Token);
 
                     cpu = Math.Round(cpuCounter.NextValue(), 2);
                     ram = Math.Round(memoryCounter.NextValue(), 2);
@@ -64,9 +64,9 @@ namespace SystemWatcher
 
         private void SettingsValidation()
         {
-            if (Settings.Default.ReportIntervallMs < 100)
+            if (Settings.Default.ReportIntervallSec < 1)
             {
-                _serviceLogger.Error("Min value of ReportIntervallMs is 100");
+                _serviceLogger.Error("Min value of ReportIntervallSec is 1");
                 throw new Exception();
             }
 

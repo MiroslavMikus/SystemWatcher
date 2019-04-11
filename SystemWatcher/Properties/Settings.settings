@@ -2,8 +2,8 @@
 <SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="SystemWatcher.Properties" GeneratedClassName="Settings">
   <Profiles />
   <Settings>
-    <Setting Name="ReportIntervallMs" Type="System.Int32" Scope="Application">
-      <Value Profile="(Default)">100</Value>
+    <Setting Name="ReportIntervallSec" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">1</Value>
     </Setting>
     <Setting Name="ElasticSearchUrl" Type="System.String" Scope="Application">
       <Value Profile="(Default)">http://localhost:9200</Value>

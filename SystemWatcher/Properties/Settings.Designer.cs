@@ -25,10 +25,10 @@ namespace SystemWatcher.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("100")]
-        public int ReportIntervallMs {
+        [global::System.Configuration.DefaultSettingValueAttribute("1")]
+        public int ReportIntervallSec {
             get {
-                return ((int)(this["ReportIntervallMs"]));
+                return ((int)(this["ReportIntervallSec"]));
             }
         }
         
