@@ -2,10 +2,8 @@
 using Serilog.Core;
 using Serilog.Sinks.Elasticsearch;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using SystemWatcher.Properties;
@@ -19,54 +17,14 @@ namespace SystemWatcher
         private Logger _elasticLogger;
         private Logger _csvLogger;
 
-        private object _ramLock = new object();
-        private object _cpuLock = new object();
-        private List<double> _cpuValues = new List<double>();
-        private List<double> _ramValues = new List<double>();
-
-        public List<double> CpuValues
-        {
-            get
-            {
-                lock (_cpuLock)
-                    return _cpuValues;
-            }
-            set
-            {
-                lock (_cpuLock)
-                    _cpuValues = value;
-            }
-        }
-
-        public List<double> RamValues
-        {
-            get
-            {
-                lock (_ramLock)
-                    return _ramValues;
-            }
-            set
-            {
-                lock (_ramLock)
-                    _ramValues = value;
-            }
-        }
-
         public void Start()
         {
-            if (Settings.Default.CaptureIntervallMs < 100)
+            if (Settings.Default.ReportIntervallMs < 100)
             {
-                throw new ArgumentException("Min value of CaptureIntervallMs is 100");
+                throw new ArgumentException("Min value of ReportIntervallMs is 10");
             }
 
-            if (Settings.Default.ReportIntervallSec < 10)
-            {
-                throw new ArgumentException("Min value of ReportIntervallSec is 10");
-            }
-
-            Console.WriteLine($"Capture intervall is {Settings.Default.CaptureIntervallMs}");
-
-            Console.WriteLine($"Report intervall is {Settings.Default.ReportIntervallSec}");
+            Console.WriteLine($"Report intervall is {Settings.Default.ReportIntervallMs}");
 
             _cancellation = new CancellationTokenSource();
 
@@ -77,45 +35,30 @@ namespace SystemWatcher
                 var memoryCounter = new PerformanceCounter("Memory", "% Committed Bytes In Use");
                 var cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
 
+                double cpu, ram;
+
+                // capture and thrown the first values
+                cpu = cpuCounter.NextValue();
+                ram = memoryCounter.NextValue();
+
                 while (true)
                 {
                     if (_cancellation.Token.IsCancellationRequested) break;
 
-                    await Task.Delay(Settings.Default.CaptureIntervallMs, _cancellation.Token);
+                    await Task.Delay(Settings.Default.ReportIntervallMs, _cancellation.Token);
 
-                    CpuValues.Add(Math.Round(cpuCounter.NextValue(), 2));
-                    RamValues.Add(Math.Round(memoryCounter.NextValue(), 2));
-                }
-            });
+                    cpu = Math.Round(cpuCounter.NextValue(), 2);
+                    ram = Math.Round(memoryCounter.NextValue(), 2);
 
-            Task.Run(async () =>
-            {
-                double cpu, count, ram;
+                    _elasticLogger.Information("Cpu {Cpu}, Ram {Ram}", cpu, ram);
 
-                while (true)
-                {
-                    await Task.Delay(TimeSpan.FromSeconds(Settings.Default.ReportIntervallSec), _cancellation.Token);
-
-                    if (_cancellation.Token.IsCancellationRequested) break;
-
-                    count = CpuValues.Count;
-
-                    cpu = Math.Round(CpuValues.Average(), 2);
-                    CpuValues.Clear();
-
-                    ram = Math.Round(RamValues.Average(), 2);
-                    RamValues.Clear();
-
-                    _elasticLogger.Information("Cpu {Cpu}, Ram {Ram}, Count {Count}", cpu, ram, count);
-
-                    _csvLogger.Information("{Cpu},{Memory},{Count}", cpu, ram, count);
+                    _csvLogger.Information("{Cpu},{Memory}", cpu, ram);
                 }
             });
         }
 
         public void Stop()
         {
-
             _cancellation.Cancel();
         }
 
@@ -132,15 +75,15 @@ namespace SystemWatcher
                             })
                             .CreateLogger();
 
-            var fileName = $"log/SystemUsage-{DateTime.Now.ToString("ddMMyyyy_HHmmss")}.csv";
+            var fileName = $"log/SystemUsage.csv";
 
-            File.AppendAllText(fileName, "DATE,TIME,CPU,MEMORY,COUNT" + Environment.NewLine);
+            if (!File.Exists(fileName))
+                File.AppendAllText(fileName, "DATE,TIME,CPU,MEMORY" + Environment.NewLine);
 
             _csvLogger = new LoggerConfiguration()
                             .MinimumLevel.Information()
                             .WriteTo.File(fileName, outputTemplate: "{Timestamp:dd/MM/yyy},{Timestamp:HH:mm:ss},{Message}{NewLine}")
                             .CreateLogger();
-
         }
     }
 }

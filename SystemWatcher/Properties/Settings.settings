@@ -2,11 +2,8 @@
 <SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="SystemWatcher.Properties" GeneratedClassName="Settings">
   <Profiles />
   <Settings>
-    <Setting Name="CaptureIntervallMs" Type="System.Int32" Scope="Application">
-      <Value Profile="(Default)">500</Value>
-    </Setting>
-    <Setting Name="ReportIntervallSec" Type="System.Int32" Scope="Application">
-      <Value Profile="(Default)">10</Value>
+    <Setting Name="ReportIntervallMs" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">100</Value>
     </Setting>
   </Settings>
 </SettingsFile>
