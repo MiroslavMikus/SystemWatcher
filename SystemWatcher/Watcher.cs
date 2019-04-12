@@ -31,12 +31,18 @@ namespace SystemWatcher
 
             SettingsValidation();
 
+            _serviceLogger.Information("Validation is done");
+
             CreateLogger();
+
+            _serviceLogger.Information("Loggers were created");
 
             _cancellation = new CancellationTokenSource();
 
             Task.Run(async () =>
             {
+                _serviceLogger.Information("Starting loop");
+
                 var memoryCounter = new PerformanceCounter("Memory", "% Committed Bytes In Use");
                 var cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
 
@@ -50,7 +56,7 @@ namespace SystemWatcher
                 {
                     if (_cancellation.Token.IsCancellationRequested) break;
 
-                    await Task.Delay(Settings.Default.ReportIntervallSec, _cancellation.Token);
+                    await Task.Delay(TimeSpan.FromSeconds(Settings.Default.ReportIntervallSec), _cancellation.Token);
 
                     cpu = Math.Round(cpuCounter.NextValue(), 2);
                     ram = Math.Round(memoryCounter.NextValue(), 2);
@@ -60,6 +66,8 @@ namespace SystemWatcher
                     _csvLogger?.Information("{Cpu},{Memory}", cpu, ram);
                 }
             });
+
+            _serviceLogger.Information("Start was finished");
         }
 
         private void SettingsValidation()
